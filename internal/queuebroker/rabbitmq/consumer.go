@@ -87,11 +87,11 @@ func (r *RabbitMQConsumer) Close() error {
 
 func (r *RabbitMQConsumer) Channel() error {
 	if r.conn == nil {
-		return fmt.Errorf("connection is nil")
+		return errors.New("Connection is nil")
 	}
 	ch, err := r.conn.Channel()
 	if err != nil {
-		return fmt.Errorf("Queue err: ", err)
+		return fmt.Errorf("Queue err:%s ", err)
 	}
 
 	r.channel = ch
@@ -110,7 +110,7 @@ func (r *RabbitMQConsumer) Queue() error {
 		nil,     // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("Queue err: ", err)
+		return fmt.Errorf("Queue err:%s ", err)
 	}
 
 	r.queue = &q
