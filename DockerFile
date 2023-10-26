@@ -1,9 +1,8 @@
-FROM golang:1.12-alpine AS builder
+FROM golang:1.19-alpine AS builder
 
 WORKDIR /build
 
 ADD go.mod .
-COPY ./config /config
 
 COPY . .
 
@@ -15,7 +14,7 @@ FROM alpine
 WORKDIR /build
 
 COPY --from=builder /build/cache /build/cache
-COPY --from=builder build/config /build/config
+COPY --from=builder /build/.env .
 
 
 CMD ["./cache"]

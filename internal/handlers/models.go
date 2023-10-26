@@ -16,6 +16,10 @@ type RespError struct {
 	Code    int    `json:"code"`
 }
 
+type MessageRequest struct {
+	Message   string `json:"message"`	
+}
+
 func NewRespError(err error, code int) RespError {
 	return RespError{
 		Message: err.Error(),

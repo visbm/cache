@@ -4,7 +4,7 @@ services:
   pgSQL-db:
     image: postgres:14
     env_file:
-      - .env
+       - .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -25,35 +25,52 @@ services:
       - .env
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_URL=${REDIS_URL}    
+      - REDIS_PORT=${REDIS_PORT}    
+      - REDIS_HOST=${REDIS_HOST}    
+      - REDIS_PASSWORD=${REDIS_PASSWORD}    
+      - REDIS_DB=${REDIS_DB}    
+      - REDIS_TIMEOUT=${REDIS_TIMEOUT}    
     ports:
       - "6379:${REDIS_PORT}"
     restart: on-failure
     volumes:
       - database-data:/var/lib/postgresql@14/auth/data/
     networks:
-          - database    
+          - database   
 
-  app:
-    build:
-        dockerfile: DockerFile
-   
+  rabbitmq:
+    image: "rabbitmq"
     ports:
-      - 8080:8080 
-    
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+          - rabbitmq 
+  cahe:
+    build:
+        dockerfile: DockerFile   
+    ports:
+      - 8080:8080     
     tty: true
     depends_on:
       - pgSQL-db 
       - redis-db
+      - rabbitmq
     restart: on-failure  
     networks:
       - database
+      - rabbitmq
 
 networks:
   database:
     driver: bridge
-
+  rabbitmq:
+    driver: bridge  
 
 volumes:
   data:
   database-data:
+  rabbitmq_data:

@@ -26,7 +26,3 @@ jobs:
       - name: Build app   
         run: 
           go build cmd/main.go 
-      - name: Deploy to server
-        run: |
-          RESPONSE=$(curl -s "$DEPLOY_URL")
-          echo "HTTP Response: $RESPONSE"     

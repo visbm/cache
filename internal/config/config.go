@@ -15,6 +15,7 @@ type Config struct {
 	PgSQL      PgSQL
 	Redis      Redis
 	HttpServer HttpServer
+	RabbitMQ   RabbitMQ
 }
 
 type PgSQL struct {
@@ -32,6 +33,10 @@ type Redis struct {
 	Password string
 	DB       int
 	Timeout  time.Duration
+}
+
+type RabbitMQ struct {
+	Url string
 }
 
 type HttpServer struct {
@@ -82,6 +87,10 @@ func LoadConfig(configPath string) (Config, error) {
 		Host:         os.Getenv("SERVER_HOST"),
 		WriteTimeout: time.Second * getDuration("SERVER_WRITE_TIMEOUT"),
 		ReadTimeout:  time.Second * getDuration("SERVER_READ_TIMEOUT"),
+	}
+
+	config.RabbitMQ = RabbitMQ{
+		Url: os.Getenv("RABBIT_MQ_URL"),
 	}
 
 	return config, nil

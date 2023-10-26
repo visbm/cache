@@ -9,6 +9,8 @@ import (
 	"cache/internal/config"
 	"cache/internal/handlers"
 	"cache/internal/httpserver"
+	"cache/internal/queuebroker"
+	"cache/internal/queuebroker/rabbitmq"
 	"cache/internal/repository"
 	"cache/internal/repository/pgsqldb"
 	"cache/internal/repository/redisdb"
@@ -18,10 +20,10 @@ import (
 )
 
 func main() {
-	logger := logger.GetLogger()	
+	logger := logger.GetLogger()
 	logger.Info("Starting application")
 
-	config, err := config.LoadConfig("config/.env")
+	config, err := config.LoadConfig(".env")
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -39,12 +41,29 @@ func main() {
 	}
 	logger.Info("db created")
 
+	rmq, err := rabbitmq.NewRabbitMQ(config.RabbitMQ)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	logger.Info("rabbitmq connected")
+
+	brokerService := queuebroker.NewBrokerService(rmq, logger)
+
 	repository := repository.NewMainRepository(cache, db, logger)
-	logger.Info("repository created ")
+
+	msgConsumer, err := rabbitmq.NewRabbitMQConsumer(config.RabbitMQ, logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	go msgConsumer.RunConsumer(ctx)
+	logger.Info("consumer created ")
 
 	service := service.NewArticleService(repository, logger)
 	articleHandler := handlers.NewArticleHandler(service, logger)
-	handler := handlers.NewHandler(articleHandler)
+	brokerHandler := handlers.NewBrokerHandler(brokerService, logger)
+
+	handler := handlers.NewHandler(articleHandler, brokerHandler)
 
 	server := httpserver.NewServer(config.HttpServer, handler.InitRoutes(), logger)
 
@@ -65,8 +84,20 @@ func main() {
 
 		err = cache.Close()
 		if err != nil {
-			logger.Errorf("Error occurred on db connection close: %s", err.Error())
+			logger.Errorf("Error occurred on cahe connection close: %s", err.Error())
 		}
+
+		err = rmq.Close()
+		if err != nil {
+			logger.Errorf("Error occurred on broker connection close: %s", err.Error())
+		}
+
+		err = msgConsumer.Close()
+		if err != nil {
+			logger.Errorf("Error occurred on msgConsumer connection close: %s", err.Error())
+		}
+
+		cancel()
 
 		logger.Info("shutting down")
 		os.Exit(0)
