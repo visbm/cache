@@ -5,6 +5,7 @@ import (
 	"cache/pkg/logger"
 	"fmt"
 	"context"
+	"errors"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
