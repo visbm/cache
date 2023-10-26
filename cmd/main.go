@@ -18,10 +18,10 @@ import (
 )
 
 func main() {
-	logger := logger.GetLogger()
+	logger := logger.GetLogger()	
 	logger.Info("Starting application")
 
-	config, err := config.LoadConfig("config/config.yaml")
+	config, err := config.LoadConfig("config/.env")
 	if err != nil {
 		logger.Fatal(err)
 	}

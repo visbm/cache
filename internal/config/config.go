@@ -1,67 +1,100 @@
 package config
 
 import (
-	"gopkg.in/yaml.v2"
+	"strconv"
 
 	"fmt"
+	"github.com/joho/godotenv"
 	"os"
 	"time"
 )
 
 type Config struct {
-	Env        string     `yaml:"env"`
-	DBType     string     `yaml:"db"`
-	PgSQL      PgSQL      `yaml:"pgSQL"`
-	Redis      Redis      `yaml:"redis"`
-	HttpServer HttpServer `yaml:"httpServer"`
+	Env        string
+	DBType     string
+	PgSQL      PgSQL
+	Redis      Redis
+	HttpServer HttpServer
 }
 
 type PgSQL struct {
-	Port     string `yaml:"port"`
-	Host     string `yaml:"host"`
-	Username string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"DBName"`
-	SSLMode  string `yaml:"SSLMode"`
+	Port     string
+	Host     string
+	Username string
+	Password string
+	DBName   string
+	SSLMode  string
 }
 
 type Redis struct {
-	Port     string `yaml:"port"`
-	Host     string `yaml:"host"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
-	Timeout  time.Duration    `yaml:"timeout"`
+	Port     string
+	Host     string
+	Password string
+	DB       int
+	Timeout  time.Duration
 }
 
 type HttpServer struct {
-	Port         string        `yaml:"port"`
-	Host         string        `yaml:"host"`
-	WriteTimeout time.Duration `yaml:"writeTimeout"`
-	ReadTimeout  time.Duration `yaml:"readTimeout"`
+	Port         string
+	Host         string
+	WriteTimeout time.Duration
+	ReadTimeout  time.Duration
 }
 
-func LoadConfig(configPath string) (*Config, error) {
+func LoadConfig(configPath string) (Config, error) {
 	if configPath == "" {
-		return nil, fmt.Errorf("config path is empty")
+		return Config{}, fmt.Errorf("config path is empty")
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("config file does not exist: %s", configPath)
+		return Config{}, fmt.Errorf("config file does not exist: %s", configPath)
 
 	}
-	file, err := os.Open(configPath)
+
+	err := godotenv.Load(configPath)
 	if err != nil {
-		return nil, err
+		return Config{}, err
 	}
-	defer file.Close()
+	var config Config
 
-	config := &Config{}
+	config.Env = os.Getenv("ENV")
+	config.DBType = os.Getenv("DBType")
 
-	d := yaml.NewDecoder(file)
+	config.PgSQL = PgSQL{
+		Port:     os.Getenv("POSTGRES_PORT"),
+		Host:     os.Getenv("POSTGRES_HOST"),
+		Username: os.Getenv("POSTGRES_USER"),
+		Password: os.Getenv("POSTGRES_PASSWORD"),
+		DBName:   os.Getenv("POSTGRES_DB"),
+		SSLMode:  os.Getenv("POSTGRES_SSLMODE"),
+	}
 
-	if err := d.Decode(&config); err != nil {
-		return nil, err
+	config.Redis = Redis{
+		Port:     os.Getenv("REDIS_PORT"),
+		Host:     os.Getenv("REDIS_HOST"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       getInt("REDIS_DB"),
+		Timeout:  time.Second * getDuration("REDIS_TIMEOUT"),
+	}
+
+	config.HttpServer = HttpServer{
+		Port:         os.Getenv("SERVER_PORT"),
+		Host:         os.Getenv("SERVER_HOST"),
+		WriteTimeout: time.Second * getDuration("SERVER_WRITE_TIMEOUT"),
+		ReadTimeout:  time.Second * getDuration("SERVER_READ_TIMEOUT"),
 	}
 
 	return config, nil
+}
+
+func getInt(s string) int {
+	str := os.Getenv(s)
+	i, _ := strconv.Atoi(str)
+	return i
+}
+
+func getDuration(s string) time.Duration {
+	str := os.Getenv(s)
+	d, _ := time.ParseDuration(str)
+	return d
 }

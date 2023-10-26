@@ -1,0 +1,21 @@
+FROM golang:1.12-alpine AS builder
+
+WORKDIR /build
+
+ADD go.mod .
+COPY ./config /config
+
+COPY . .
+
+RUN apk update && apk add git
+RUN go build -o ./cache ./cmd/main.go
+
+FROM alpine
+
+WORKDIR /build
+
+COPY --from=builder /build/cache /build/cache
+COPY --from=builder build/config /build/config
+
+
+CMD ["./cache"]
